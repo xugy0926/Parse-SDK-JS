@@ -22,11 +22,11 @@ addons:
 
 jobs:
   include:
-    - stage: test
-      env:
-        - CXX=g++-4.8
-      script: npm test && ./run_integration.sh
-      after_script: cat ./coverage/coverage-final.json | ./node_modules/codecov.io/bin/codecov.io.js && rm -rf ./coverage
+    # - stage: test
+    #   env:
+    #     - CXX=g++-4.8
+    #   script: npm test && ./run_integration.sh
+    #   after_script: cat ./coverage/coverage-final.json | ./node_modules/codecov.io/bin/codecov.io.js && rm -rf ./coverage
     # release on github latest branch
     - stage: release
       env: 

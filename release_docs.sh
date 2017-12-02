@@ -7,9 +7,9 @@ REPO="https://github.com/${TRAVIS_PULL_REQUEST_SLUG}"
 
 rm -rf docs
 git clone -b gh-pages --single-branch $REPO ./docs
-pushd docs
+cd docs
 git pull origin gh-pages
-popd
+cd ..
 
 DEST="master"
 
