@@ -8,8 +8,6 @@ branches:
     - master
     - /^greenkeeper/.*$/
 
-env:
-  - CXX=g++-4.8
 
 services: mongodb
 
@@ -21,7 +19,10 @@ addons:
     packages:
       - mongodb-org-server
       - g++-4.8
+
 stage: test
+env:
+  - CXX=g++-4.8
 script: npm test && ./run_integration.sh
 after_script: cat ./coverage/coverage-final.json | ./node_modules/codecov.io/bin/codecov.io.js && rm -rf ./coverage
 
