@@ -50,4 +50,4 @@ jobs:
           on:
             tags: true
             all_branches: true
-            repo: parse-community/parse-server
+            repo: parse-community/Parse-SDK-JS

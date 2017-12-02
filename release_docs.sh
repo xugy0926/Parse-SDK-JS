@@ -1,3 +1,4 @@
+#!/bin/sh -e
 if [ "${TRAVIS_PULL_REQUEST_SLUG}" == "" ];
 then
   echo "Cannot release docs without TRAVIS_PULL_REQUEST_SLUG set"
