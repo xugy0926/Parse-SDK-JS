@@ -8,7 +8,7 @@
  *
  * @flow
  */
-/* global XMLHttpRequest, XDomainRequest */
+/* global XMLHttpRequest, XDomainRequest, wx */
 import CoreManager from './CoreManager';
 import ParseError from './ParseError';
 
@@ -261,4 +261,127 @@ const RESTController = {
   }
 }
 
-module.exports = RESTController;
+const RESTController2 = {
+  ajax(method: string, url: string, data: any, headers?: any) {
+    headers = headers || {};
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url,
+        method,
+        data,
+        headers,
+        success ({ data, statusCode }) {
+          if (statusCode !== 200) {
+            reject(data.error, statusCode)
+          } else {
+            resolve(data, statusCode)
+          }
+        },
+        fail({ errMsg }) {
+          reject(errMsg)
+        }
+      })
+    })
+  },
+
+  request(method: string, path: string, data: mixed, options?: RequestOptions) {
+    options = options || {};
+    var url = CoreManager.get('SERVER_URL');
+    if (url[url.length - 1] !== '/') {
+      url += '/';
+    }
+    url += path;
+
+    var payload = {};
+    if (data && typeof data === 'object') {
+      for (var k in data) {
+        payload[k] = data[k];
+      }
+    }
+
+    if (method !== 'POST') {
+      payload._method = method;
+      method = 'POST';
+    }
+
+    payload._ApplicationId = CoreManager.get('APPLICATION_ID');
+    const jsKey = CoreManager.get('JAVASCRIPT_KEY');
+    if (jsKey) {
+      payload._JavaScriptKey = jsKey;
+    }
+    payload._ClientVersion = CoreManager.get('VERSION');
+
+    var useMasterKey = options.useMasterKey;
+    if (typeof useMasterKey === 'undefined') {
+      useMasterKey = CoreManager.get('USE_MASTER_KEY');
+    }
+    if (useMasterKey) {
+      if (CoreManager.get('MASTER_KEY')) {
+        delete payload._JavaScriptKey;
+        payload._MasterKey = CoreManager.get('MASTER_KEY');
+      } else {
+        throw new Error('Cannot use the Master Key, it has not been provided.');
+      }
+    }
+
+    if (CoreManager.get('FORCE_REVOCABLE_SESSION')) {
+      payload._RevocableSession = '1';
+    }
+
+    var installationId = options.installationId;
+    var installationIdPromise;
+    if (installationId && typeof installationId === 'string') {
+      installationIdPromise = Promise.resolve(installationId);
+    } else {
+      var installationController = CoreManager.getInstallationController();
+      installationIdPromise = installationController.currentInstallationId();
+    }
+
+    return installationIdPromise.then((iid) => {
+      payload._InstallationId = iid;
+      var userController = CoreManager.getUserController();
+      if (options && typeof options.sessionToken === 'string') {
+        return Promise.resolve(options.sessionToken);
+      } else if (userController) {
+        return userController.currentUserAsync().then((user) => {
+          if (user) {
+            return Promise.resolve(user.getSessionToken());
+          }
+          return Promise.resolve(null);
+        });
+      }
+      return Promise.resolve(null);
+    }).then((token) => {
+      if (token) {
+        payload._SessionToken = token;
+      }
+
+      var payloadString = JSON.stringify(payload);
+      return RESTController2.ajax(method, url, payloadString);
+    }).catch(function(error, statusCode) {
+      try {
+        if (statusCode) {
+          error = new ParseError(statusCode, error);
+        } else {
+          error = new ParseError(ParseError.CONNECTION_FAILED, error);
+        }
+      } catch (e) {
+        // If we fail to parse the error text, that's okay.
+        error = new ParseError(
+          ParseError.INVALID_JSON,
+          'Received an error with invalid JSON from Parse: '
+        );
+      }
+
+      return Promise.reject(error);
+    });
+  },
+}
+
+let x = RESTController;
+
+if (process.env.PARSE_BUILD === 'mini-program') {
+  x = RESTController2;
+}
+
+module.exports = x;

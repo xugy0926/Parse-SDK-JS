@@ -27,11 +27,15 @@ var PRESETS = {
     "targets": { "node": "8" }
   }]],
   'react-native': ['@babel/preset-react'],
+  'mini-program': [["@babel/preset-env", {
+    "targets": "> 0.25%, not dead"
+  }], '@babel/preset-react'],
 };
 var PLUGINS = {
   'browser': [transformRuntime, '@babel/plugin-transform-flow-comments', '@babel/plugin-proposal-class-properties', 'inline-package-json', 'transform-inline-environment-variables'],
   'node': ['@babel/plugin-transform-flow-comments', 'inline-package-json', 'transform-inline-environment-variables'],
   'react-native': ['@babel/plugin-transform-flow-comments', 'inline-package-json', 'transform-inline-environment-variables'],
+  'mini-program': [transformRuntime, '@babel/plugin-transform-flow-comments', '@babel/plugin-proposal-class-properties', 'inline-package-json', 'transform-inline-environment-variables'],
 };
 
 var DEV_HEADER = (
@@ -91,6 +95,32 @@ gulp.task('browserify', function(cb) {
 
 gulp.task('minify', function() {
   return gulp.src('dist/parse.js')
+    .pipe(uglify())
+    .pipe(insert.prepend(FULL_HEADER))
+    .pipe(rename({ extname: '.min.js' }))
+    .pipe(gulp.dest('./dist'))
+});
+
+gulp.task('mini-browserify', function(cb) {
+  var stream = browserify({
+    builtins: ['_process', 'events'],
+    entries: 'lib/mini-program/Parse.js',
+    standalone: 'Parse'
+  })
+    .exclude('wx')
+    .ignore('_process')
+    .bundle();
+  stream.on('end', () => {
+    cb();
+  });
+  return stream.pipe(source('mini-parse.js'))
+    .pipe(derequire())
+    .pipe(insert.prepend(DEV_HEADER))
+    .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('mini-minify', function() {
+  return gulp.src('dist/mini-parse.js')
     .pipe(uglify())
     .pipe(insert.prepend(FULL_HEADER))
     .pipe(rename({ extname: '.min.js' }))
