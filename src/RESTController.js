@@ -271,10 +271,10 @@ const RESTController2 = {
         data,
         headers,
         success ({ data, statusCode }) {
-          if (statusCode !== 200) {
-            reject(data.error, statusCode)
-          } else {
+          if (statusCode >= 200 && statusCode < 400) {
             resolve(data, statusCode)
+          } else {
+            reject(data.error, statusCode)
           }
         },
         fail({ errMsg }) {
